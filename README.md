@@ -222,7 +222,7 @@ templates/
 
 - **GitHub**：[@geekfoxcharlie](https://github.com/geekfoxcharlie)
 - **Email**：geekfoxcharlie@gmail.com
-- **小红书**：极客狐（扫码关注获取更多创作技巧）
+- **小红书**：极客狐
 
 ---
 
@@ -231,8 +231,6 @@ templates/
 ## ⭐ 如果这个项目对您有帮助，请点个 Star 支持一下！
 
 **让更多人看到这款小红书文字卡片生成器**
-
-### 🌟 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=geekfoxcharlie/XHS-TextCard&type=Date)](https://star-history.com/#geekfoxcharlie/XHS-TextCard&Date)
 
