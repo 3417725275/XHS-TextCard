@@ -197,14 +197,18 @@ class App {
         
         // 尝试从本地存储加载用户自定义配置
         const savedConfig = localStorage.getItem(`xhs_tpl_config_${templateId}`);
+        
+        // 使用深度克隆防止污染 templateManager 中的原始配置
+        const baseConfig = JSON.parse(JSON.stringify(template.config));
+
         if (savedConfig) {
             try {
-                this.currentTemplateConfig = { ...template.config, ...JSON.parse(savedConfig) };
+                this.currentTemplateConfig = { ...baseConfig, ...JSON.parse(savedConfig) };
             } catch (e) {
-                this.currentTemplateConfig = { ...template.config };
+                this.currentTemplateConfig = baseConfig;
             }
         } else {
-            this.currentTemplateConfig = { ...template.config };
+            this.currentTemplateConfig = baseConfig;
         }
 
         this.renderTemplateList();
@@ -306,7 +310,8 @@ class App {
         const template = this.templateManager.getTemplate(this.currentTemplate);
         if (template) {
             localStorage.removeItem(`xhs_tpl_config_${this.currentTemplate}`);
-            this.currentTemplateConfig = { ...template.config };
+            // 使用深度克隆恢复初始配置
+            this.currentTemplateConfig = JSON.parse(JSON.stringify(template.config));
             this.editorController.setConfig(this.currentTemplateConfig);
             this.generatePreview();
         }

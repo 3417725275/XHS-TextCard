@@ -22,7 +22,9 @@ class TemplateManager {
     }
 
     async loadTemplate(templateId) {
-        if (this.templates[templateId]) return this.templates[templateId];
+        if (this.templates[templateId]) {
+            return JSON.parse(JSON.stringify(this.templates[templateId]));
+        }
 
         try {
             const response = await fetch(`templates/${templateId}.json`);
@@ -53,6 +55,8 @@ class TemplateManager {
                 h2Scale: 1.4, 
                 h3Scale: 1.2, 
                 accentColor: "#333333",
+                hasSocialIcons: false,
+                selectedSocialIcons: [],
                 ...configData.config
             };
 
@@ -74,7 +78,12 @@ class TemplateManager {
         }
     }
 
-    getTemplate(templateId) { return this.templates[templateId] || null; }
+    getTemplate(templateId) { 
+        const template = this.templates[templateId];
+        if (!template) return null;
+        // 返回深拷贝，防止外部直接修改缓存中的原始配置
+        return JSON.parse(JSON.stringify(template));
+    }
 
     getAllTemplates() {
         if (this.templateOrder) {

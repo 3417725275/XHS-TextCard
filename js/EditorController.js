@@ -321,21 +321,20 @@ class EditorController {
         document.querySelectorAll('.social-icon-item').forEach(item => {
             item.addEventListener('click', () => {
                 const iconId = item.dataset.icon;
-                if (!this.currentConfig.selectedSocialIcons) {
-                    this.currentConfig.selectedSocialIcons = [];
-                }
+                let selectedIcons = [...(this.currentConfig.selectedSocialIcons || [])];
                 
-                const index = this.currentConfig.selectedSocialIcons.indexOf(iconId);
+                const index = selectedIcons.indexOf(iconId);
                 if (index > -1) {
                     // 如果已选中，则移除
-                    this.currentConfig.selectedSocialIcons.splice(index, 1);
+                    selectedIcons.splice(index, 1);
                     item.classList.remove('selected');
                 } else {
-                    // 如果未选中，则追加到末尾（保持点击顺序）
-                    this.currentConfig.selectedSocialIcons.push(iconId);
+                    // 如果未选中，则追加到末尾
+                    selectedIcons.push(iconId);
                     item.classList.add('selected');
                 }
                 
+                this.currentConfig.selectedSocialIcons = selectedIcons;
                 this.notifyConfigChange();
             });
         });
@@ -397,7 +396,7 @@ class EditorController {
      * 设置全量配置并同步到 UI
      */
     setConfig(config) {
-        this.currentConfig = { ...config };
+        this.currentConfig = JSON.parse(JSON.stringify(config));
         if (config.bgColor) {
             if (config.bgColor.startsWith('linear-gradient')) this.lastGradientColor = config.bgColor;
             else this.lastSolidColor = config.bgColor;

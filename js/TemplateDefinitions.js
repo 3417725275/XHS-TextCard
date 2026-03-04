@@ -1,13 +1,6 @@
 /**
  * TemplateDefinitions
  * 定义每个模板特有的 Canvas 绘制逻辑和布局参数
- * 
- * 模板设计规范 (Template Design Standards):
- * 1. 颜色变量统一：所有模板必须严格遵守 'textColor' (正文色) 和 'accentColor' (强调色) 的双色系统。
- * 2. 职责分离：
- *    - textColor: 负责所有普通段落、列表文本、引用文本以及基础装饰性 UI (如边框、辅助文字、模拟窗口背景)。
- *    - accentColor: 负责所有强调内容，包括：标题 (Headings)、加粗 (Bold)、高亮 (Highlight) 文本或背景、列表符号 (List Markers)、引用竖线 (Quote Bars)。
- * 3. 模板独立性：装饰性的固定 UI (如模拟按钮、页眉页脚) 除非设计需要，否则不应受强调色控制，以维持模板本身的视觉识别度。
  */
 const TemplateDefinitions = {
     /**
@@ -43,23 +36,6 @@ const TemplateDefinitions = {
         ctx.restore();
     },
 
-    'blank': {
-        /**
-         * 空白模板 - 极致简约
-         */
-        drawForeground: (ctx, width, height, index, totalCount, config) => {
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config);
-        },
-        getTextStyles: (segment, config) => {
-            const accentColor = config.accentColor || '#1A1A1A';
-            const textColor = config.textColor || '#1A1A1A';
-            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) {
-                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.2) };
-            }
-            return { textColor };
-        }
-    },
-
     'polaroid': {
         /**
          * 复古拍立得 - 相纸留白与复古手写感
@@ -79,7 +55,6 @@ const TemplateDefinitions = {
         },
         drawBackground: (ctx, width, height, config) => {
             ctx.save();
-            // 如果不是渐变模式，添加噪点
             if (config.bgMode !== 'gradient') {
                 ctx.fillStyle = config.bgColor || '#D6D6D6';
                 ctx.fillRect(0, 0, width, height);
@@ -106,7 +81,6 @@ const TemplateDefinitions = {
             const photoWidth = paperWidth - (photoMargin * 2);
             const photoHeight = paperHeight - 450;
             
-            // 照片区域背景
             ctx.fillStyle = config.bgColor && config.bgMode === 'solid' ? config.bgColor : '#2C2C2C';
             ctx.fillRect(marginX + photoMargin, marginY + photoMargin, photoWidth, photoHeight);
             
@@ -117,7 +91,6 @@ const TemplateDefinitions = {
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
-            // 胶带
             ctx.save();
             ctx.translate(width / 2, 45); ctx.rotate(-0.05);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -125,7 +98,6 @@ const TemplateDefinitions = {
             ctx.fillRect(-80, -20, 160, 40);
             ctx.restore();
 
-            // 页码：放在右下角留白处
             TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
                 x: width - 75, y: height - 85, color: 'rgba(0,0,0,0.3)', font: 'italic 14px serif'
             });
@@ -185,21 +157,16 @@ const TemplateDefinitions = {
             const bgColor = config.bgColor || '#FDFBF7';
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
-            
             ctx.globalAlpha = 0.04;
             for (let i = 0; i < 3000; i++) {
                 ctx.fillStyle = Math.random() > 0.5 ? '#8b4513' : '#fff';
                 ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
             }
-            
             const grad = ctx.createLinearGradient(0, 0, width, 0);
-            grad.addColorStop(0, 'rgba(0,0,0,0.02)');
-            grad.addColorStop(0.05, 'rgba(0,0,0,0)');
-            grad.addColorStop(0.5, 'rgba(255,255,255,0.01)');
-            grad.addColorStop(0.95, 'rgba(0,0,0,0)');
+            grad.addColorStop(0, 'rgba(0,0,0,0.02)'); grad.addColorStop(0.05, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.01)'); grad.addColorStop(0.95, 'rgba(0,0,0,0)');
             grad.addColorStop(1, 'rgba(0,0,0,0.02)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
@@ -211,13 +178,11 @@ const TemplateDefinitions = {
             ctx.fillStyle = CanvasUtils.hexToRgba(textColor, 0.4);
             ctx.font = 'italic 11px "Noto Serif SC", serif';
             ctx.textAlign = 'center'; ctx.fillText('• 经典文学集珍 •', width / 2, 55);
-
             if (config.showPageNumber) {
                 const pageNum = config.hasCover ? index : index + 1;
                 const totalPage = config.hasCover ? totalCount - 1 : totalCount;
                 if (totalPage > 0) {
-                    ctx.font = 'italic 13px serif';
-                    ctx.textAlign = 'right';
+                    ctx.font = 'italic 13px serif'; ctx.textAlign = 'right';
                     ctx.fillText(`— ${pageNum} —`, width - padding, height - 35);
                 }
             }
@@ -232,47 +197,7 @@ const TemplateDefinitions = {
         }
     },
 
-    'minimalist-magazine': {
-        /**
-         * 极简杂志
-         */
-        getContentBox: (config, width, height) => {
-            const padding = parseFloat(config.textPadding) || 45;
-            const topMargin = 100, bottomMargin = config.hasSignature ? 80 : 60;
-            return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
-        },
-        drawTextAreaBackground: (ctx, rect, config) => {
-            const textColor = config.textColor || '#1A1A1A';
-            ctx.save();
-            ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.1);
-            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rect.x, 85); ctx.lineTo(rect.x + rect.width, 85); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(rect.x, PREVIEW_HEIGHT - 55); ctx.lineTo(rect.x + rect.width, PREVIEW_HEIGHT - 55); ctx.stroke();
-            ctx.restore();
-        },
-        drawForeground: (ctx, width, height, index, totalCount, config) => {
-            const decorativeColor = '#1A1A1A';
-            ctx.save();
-            ctx.fillStyle = decorativeColor; ctx.font = 'bold 12px serif';
-            ctx.textAlign = 'left'; ctx.fillText('EDITORIAL', 45, 75);
-            ctx.fillStyle = CanvasUtils.hexToRgba(decorativeColor, 0.6); ctx.font = 'italic 10px serif';
-            ctx.textAlign = 'right'; ctx.fillText('COLLECTION // VOL. 2026', width - 45, 75);
-            ctx.restore();
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, { x: width - 45, y: height - 35 });
-        },
-        getTextStyles: (segment, config) => {
-            const accentColor = config.accentColor || '#1A1A1A';
-            const textColor = config.textColor || '#1A1A1A';
-            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) {
-                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.15) };
-            }
-            return { textColor };
-        }
-    },
-
     'ios-memo': {
-        /**
-         * 苹果备忘录
-         */
         getContentBox: (config, width, height) => {
             const paperX = 15, paperY = 55, paperW = width - 30, paperH = height - 110;
             const internalPadding = Math.max(10, parseFloat(config.textPadding) || 20); 
@@ -314,10 +239,164 @@ const TemplateDefinitions = {
         }
     },
 
+    'swiss-studio': {
+        getContentBox: (config, width, height) => {
+             const padding = parseFloat(config.textPadding) || 35;
+             const bottomOffset = config.hasSignature ? Math.max(padding, 60) : padding;
+             return { x: padding, y: padding, width: width - (padding * 2), height: height - padding - bottomOffset };
+        },
+        drawBackground: (ctx, width, height, config) => {
+            ctx.save(); ctx.fillStyle = config.accentColor || '#FF4500'; ctx.fillRect(0, 0, 6, height); ctx.restore();
+        },
+        drawTextAreaBackground: (ctx, rect, config) => {
+            ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.03)'; ctx.lineWidth = 0.5;
+            for(let x = 0; x < PREVIEW_WIDTH; x += 40) {
+                if (x < 10) continue;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, PREVIEW_HEIGHT); ctx.stroke();
+            }
+            ctx.restore();
+        },
+        drawForeground: (ctx, width, height, index, totalCount, config) => {
+            const accentColor = config.accentColor || '#FF4500', decorativeColor = '#1A1A1A';
+            ctx.save();
+            ctx.fillStyle = decorativeColor; ctx.font = '700 10px Helvetica'; ctx.textAlign = 'right';
+            ctx.fillText('REF. CH-8004', width - 25, 25);
+            ctx.beginPath(); ctx.rect(width - 40, height - 40, 15, 15); ctx.strokeStyle = accentColor; ctx.lineWidth = 2; ctx.stroke();
+            ctx.restore();
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
+                color: '#1A1A1A', font: '700 10px Helvetica', padZero: true, textAlign: 'left', x: 25, y: height - 25
+            });
+        },
+        getTextStyles: (segment, config) => {
+            const accentColor = config.accentColor || '#FF4500', textColor = config.textColor || '#1A1A1A';
+            if (segment.headingLevel || segment.fontWeight === '700' || segment.fontWeight === '800') return { textColor: accentColor };
+            if (segment.isHighlight) return { highlightColor: accentColor, textColor: '#FFFFFF' };
+            return { textColor };
+        }
+    },
+
+    'minimalist-magazine': {
+        getContentBox: (config, width, height) => {
+            const padding = parseFloat(config.textPadding) || 45;
+            const topMargin = 100, bottomMargin = config.hasSignature ? 80 : 60;
+            return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
+        },
+        drawTextAreaBackground: (ctx, rect, config) => {
+            const textColor = config.textColor || '#1A1A1A';
+            ctx.save();
+            ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.1);
+            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rect.x, 85); ctx.lineTo(rect.x + rect.width, 85); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rect.x, PREVIEW_HEIGHT - 55); ctx.lineTo(rect.x + rect.width, PREVIEW_HEIGHT - 55); ctx.stroke();
+            ctx.restore();
+        },
+        drawForeground: (ctx, width, height, index, totalCount, config) => {
+            const decorativeColor = '#1A1A1A';
+            ctx.save();
+            ctx.fillStyle = decorativeColor; ctx.font = 'bold 12px serif';
+            ctx.textAlign = 'left'; ctx.fillText('EDITORIAL', 45, 75);
+            ctx.fillStyle = CanvasUtils.hexToRgba(decorativeColor, 0.6); ctx.font = 'italic 10px serif';
+            ctx.textAlign = 'right'; ctx.fillText('COLLECTION // VOL. 2026', width - 45, 75);
+            ctx.restore();
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, { x: width - 45, y: height - 35 });
+        },
+        getTextStyles: (segment, config) => {
+            const accentColor = config.accentColor || '#1A1A1A';
+            const textColor = config.textColor || '#1A1A1A';
+            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) {
+                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.15) };
+            }
+            return { textColor };
+        }
+    },
+
+    'aura-gradient': {
+        getContentBox: (config, width, height) => {
+            const cardX = 25, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
+            const padding = parseFloat(config.textPadding) || 35;
+            return { x: cardX + padding, y: cardY + padding, width: width - 50 - (padding * 2), height: height - cardY - cardBottomMargin - (padding * 2) };
+        },
+        drawBackground: (ctx, width, height) => {
+            ctx.save();
+            const auras = [
+                { x: 0, y: 0, r: 1, c1: 'rgba(255, 195, 160, 0.3)', c2: 'rgba(255, 195, 160, 0)' },
+                { x: 1, y: 0.2, r: 0.8, c1: 'rgba(255, 175, 189, 0.25)', c2: 'rgba(255, 175, 189, 0)' },
+                { x: 0.5, y: 1, r: 1.2, c1: 'rgba(33, 147, 176, 0.15)', c2: 'rgba(33, 147, 176, 0)' }
+            ];
+            auras.forEach(aura => {
+                const grad = ctx.createRadialGradient(width * aura.x, height * aura.y, 0, width * aura.x, height * aura.y, width * aura.r);
+                grad.addColorStop(0, aura.c1); grad.addColorStop(1, aura.c2);
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+            });
+            ctx.globalAlpha = 0.02;
+            for (let i = 0; i < 2000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000'; ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
+            }
+            ctx.restore();
+        },
+        drawTextAreaBackground: (ctx, rect, config) => {
+            const cardX = 25, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
+            const cardW = PREVIEW_WIDTH - 50, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
+            ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.03)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 10;
+            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, 'rgba(255, 255, 255, 0.5)', true, 'rgba(255, 255, 255, 0.4)');
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; ctx.lineWidth = 1.5;
+            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, null, true);
+            ctx.restore();
+        },
+        drawForeground: (ctx, width, height, index, totalCount, config) => {
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config);
+        },
+        getTextStyles: (segment, config) => {
+            const accentColor = config.accentColor || '#2D3436', textColor = config.textColor || '#2D3436';
+            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.2) };
+            return { textColor };
+        }
+    },
+
+    'deep-night': {
+        getContentBox: (config, width, height) => {
+            const cardX = 20, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
+            const padding = parseFloat(config.textPadding) || 35;
+            return { x: cardX + padding, y: cardY + padding, width: width - 40 - (padding * 2), height: height - cardY - cardBottomMargin - (padding * 2) };
+        },
+        drawBackground: (ctx, width, height, config) => {
+            const accentColor = config.accentColor || '#00F5FF';
+            ctx.save();
+            if (config.bgMode !== 'gradient' && (config.bgColor === '#0D0D0D' || config.bgColor === '#000000')) {
+                const grad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
+                grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#050505');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+            }
+            const lineGrad = ctx.createLinearGradient(0, 0, 0, height);
+            lineGrad.addColorStop(0, 'transparent'); lineGrad.addColorStop(0.2, accentColor);
+            lineGrad.addColorStop(0.8, accentColor); lineGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = lineGrad; ctx.globalAlpha = 0.3; ctx.fillRect(0, 0, 3, height);
+            ctx.restore();
+        },
+        drawTextAreaBackground: (ctx, rect, config) => {
+            const cardX = 20, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
+            const cardW = PREVIEW_WIDTH - 40, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
+            ctx.save();
+            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16, 'rgba(255,255,255,0.02)', true, 'rgba(255,255,255,0.05)');
+            ctx.restore();
+        },
+        drawForeground: (ctx, width, height, index, totalCount, config) => {
+            ctx.save(); ctx.fillStyle = 'rgba(229, 229, 229, 0.3)'; ctx.font = '800 10px Inter, sans-serif'; 
+            ctx.textAlign = 'right'; ctx.fillText('// THOUGHT MODE ON', width - 25, 25);
+            ctx.strokeStyle = 'rgba(229, 229, 229, 0.2)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(25, height - 60); ctx.lineTo(width - 25, height - 60); ctx.stroke();
+            ctx.restore();
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, { color: 'rgba(255, 255, 255, 0.3)', textAlign: 'left', x: 25, y: 25 });
+        },
+        getTextStyles: (segment, config) => {
+            const accentColor = config.accentColor || '#00F5FF', textColor = config.textColor || '#E5E5E5';
+            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.isCode || segment.headingLevel) {
+                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.1), codeBgColor: CanvasUtils.hexToRgba(accentColor, 0.15) };
+            }
+            return { textColor };
+        }
+    },
+
     'pro-doc': {
-        /**
-         * 大厂文档
-         */
         getContentBox: (config, width, height) => {
             const winX = 15, winW = width - 30, winY = 40; 
             const winBottomMargin = config.hasSignature ? 60 : 35;
@@ -364,145 +443,6 @@ const TemplateDefinitions = {
         }
     },
 
-    'deep-night': {
-        /**
-         * 暗夜深思
-         */
-        getContentBox: (config, width, height) => {
-            const cardX = 20, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const padding = parseFloat(config.textPadding) || 35;
-            return { x: cardX + padding, y: cardY + padding, width: width - 40 - (padding * 2), height: height - cardY - cardBottomMargin - (padding * 2) };
-        },
-        drawBackground: (ctx, width, height, config) => {
-            const accentColor = config.accentColor || '#00F5FF';
-            ctx.save();
-            if (config.bgMode !== 'gradient' && (config.bgColor === '#0D0D0D' || config.bgColor === '#000000')) {
-                const grad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
-                grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#050505');
-                ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
-            }
-            const lineGrad = ctx.createLinearGradient(0, 0, 0, height);
-            lineGrad.addColorStop(0, 'transparent'); lineGrad.addColorStop(0.2, accentColor);
-            lineGrad.addColorStop(0.8, accentColor); lineGrad.addColorStop(1, 'transparent');
-            ctx.fillStyle = lineGrad; ctx.globalAlpha = 0.3; ctx.fillRect(0, 0, 3, height);
-            ctx.restore();
-        },
-        drawTextAreaBackground: (ctx, rect, config) => {
-            const cardX = 20, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const cardW = PREVIEW_WIDTH - 40, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
-            ctx.save();
-            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16, 'rgba(255,255,255,0.02)', true, 'rgba(255,255,255,0.05)');
-            ctx.restore();
-        },
-        drawForeground: (ctx, width, height, index, totalCount, config) => {
-            ctx.save(); ctx.fillStyle = 'rgba(229, 229, 229, 0.3)'; ctx.font = '800 10px Inter, sans-serif'; 
-            ctx.textAlign = 'right'; ctx.fillText('// THOUGHT MODE ON', width - 25, 25);
-            ctx.strokeStyle = 'rgba(229, 229, 229, 0.2)'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(25, height - 60); ctx.lineTo(width - 25, height - 60); ctx.stroke();
-            ctx.restore();
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, { color: 'rgba(255, 255, 255, 0.3)', textAlign: 'left', x: 25, y: 25 });
-        },
-        getTextStyles: (segment, config) => {
-            const accentColor = config.accentColor || '#00F5FF', textColor = config.textColor || '#E5E5E5';
-            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.isCode || segment.headingLevel) {
-                return { 
-                    textColor: accentColor, 
-                    highlightColor: CanvasUtils.hexToRgba(accentColor, 0.1),
-                    codeBgColor: CanvasUtils.hexToRgba(accentColor, 0.15) 
-                };
-            }
-            return { textColor };
-        }
-    },
-
-    'aura-gradient': {
-        /**
-         * 灵感弥散
-         */
-        getContentBox: (config, width, height) => {
-            const cardX = 25, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const padding = parseFloat(config.textPadding) || 35;
-            return { x: cardX + padding, y: cardY + padding, width: width - 50 - (padding * 2), height: height - cardY - cardBottomMargin - (padding * 2) };
-        },
-        drawBackground: (ctx, width, height) => {
-            ctx.save();
-            const auras = [
-                { x: 0, y: 0, r: 1, c1: 'rgba(255, 195, 160, 0.3)', c2: 'rgba(255, 195, 160, 0)' },
-                { x: 1, y: 0.2, r: 0.8, c1: 'rgba(255, 175, 189, 0.25)', c2: 'rgba(255, 175, 189, 0)' },
-                { x: 0.5, y: 1, r: 1.2, c1: 'rgba(33, 147, 176, 0.15)', c2: 'rgba(33, 147, 176, 0)' }
-            ];
-            auras.forEach(aura => {
-                const grad = ctx.createRadialGradient(width * aura.x, height * aura.y, 0, width * aura.x, height * aura.y, width * aura.r);
-                grad.addColorStop(0, aura.c1); grad.addColorStop(1, aura.c2);
-                ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
-            });
-            ctx.globalAlpha = 0.02;
-            for (let i = 0; i < 2000; i++) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000'; ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
-            }
-            ctx.restore();
-        },
-        drawTextAreaBackground: (ctx, rect, config) => {
-            const cardX = 25, cardY = 30, cardBottomMargin = config.hasSignature ? 60 : 35;
-            const cardW = PREVIEW_WIDTH - 50, cardH = PREVIEW_HEIGHT - cardY - cardBottomMargin;
-            ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.03)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 10;
-            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, 'rgba(255, 255, 255, 0.5)', true, 'rgba(255, 255, 255, 0.4)');
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; ctx.lineWidth = 1.5;
-            CanvasUtils.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, null, true);
-            ctx.restore();
-        },
-        drawForeground: (ctx, width, height, index, totalCount, config) => {
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config);
-        },
-        getTextStyles: (segment, config) => {
-            const accentColor = config.accentColor || '#2D3436', textColor = config.textColor || '#2D3436';
-            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.2) };
-            return { textColor };
-        }
-    },
-
-    'swiss-studio': {
-        /**
-         * 苏黎世工作室
-         */
-        getContentBox: (config, width, height) => {
-             const padding = parseFloat(config.textPadding) || 35;
-             const bottomOffset = config.hasSignature ? Math.max(padding, 60) : padding;
-             return { x: padding, y: padding, width: width - (padding * 2), height: height - padding - bottomOffset };
-        },
-        drawBackground: (ctx, width, height, config) => {
-            ctx.save(); ctx.fillStyle = config.accentColor || '#FF4500'; ctx.fillRect(0, 0, 6, height); ctx.restore();
-        },
-        drawTextAreaBackground: (ctx, rect, config) => {
-            ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.03)'; ctx.lineWidth = 0.5;
-            for(let x = 0; x < PREVIEW_WIDTH; x += 40) {
-                if (x < 10) continue;
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, PREVIEW_HEIGHT); ctx.stroke();
-            }
-            ctx.restore();
-        },
-        drawForeground: (ctx, width, height, index, totalCount, config) => {
-            const accentColor = config.accentColor || '#FF4500', decorativeColor = '#1A1A1A';
-            ctx.save();
-            ctx.fillStyle = decorativeColor; ctx.font = '700 10px Helvetica'; ctx.textAlign = 'right';
-            ctx.fillText('REF. CH-8004', width - 25, 25);
-            ctx.beginPath(); ctx.rect(width - 40, height - 40, 15, 15); ctx.strokeStyle = accentColor; ctx.lineWidth = 2; ctx.stroke();
-            ctx.restore();
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
-                color: '#1A1A1A', font: '700 10px Helvetica', padZero: true, textAlign: 'left', x: 25, y: height - 25
-            });
-        },
-        getTextStyles: (segment, config) => {
-            const accentColor = config.accentColor || '#FF4500', textColor = config.textColor || '#1A1A1A';
-            if (segment.headingLevel || segment.fontWeight === '700' || segment.fontWeight === '800') return { textColor: accentColor };
-            if (segment.isHighlight) return { highlightColor: accentColor, textColor: '#FFFFFF' };
-            return { textColor };
-        }
-    },
-
-    /**
-     * 获取内容区域的精确位置和大小
-     */
     getContentBox: (templateId, config, width, height) => {
         if (TemplateDefinitions[templateId] && TemplateDefinitions[templateId].getContentBox) {
             return TemplateDefinitions[templateId].getContentBox(config, width, height);
