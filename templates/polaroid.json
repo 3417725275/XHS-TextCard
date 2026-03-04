@@ -25,7 +25,7 @@
     "h2Scale": 1.2,
     "h3Scale": 1.1,
     "accentColor": "#D9534F",
-    "showPageNumber": false,
+    "showPageNumber": true,
     "hasSocialIcons": false,
     "selectedSocialIcons": []
   }

@@ -230,18 +230,29 @@ const TemplateDefinitions = {
             return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
-            const textColor = config.textColor || '#37352F';
             const padding = parseFloat(config.textPadding) || 40;
             ctx.save();
             ctx.font = '14px ui-sans-serif, system-ui, sans-serif';
             ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            
+            // 使用固定的 Notion 灰 (#9B9A97)，不受用户修改的正文颜色影响
+            const fixedMutedColor = '#9B9A97';
+            const fixedLineColor = 'rgba(55, 53, 47, 0.08)';
+
+            ctx.fillStyle = '#37352F'; // 图标保持深灰
             ctx.fillText('📖', padding, 60);
-            ctx.fillStyle = CanvasUtils.hexToRgba(textColor, 0.5);
+            
+            ctx.fillStyle = fixedMutedColor;
             ctx.fillText(' /  Workspace  /  Notes', padding + 25, 60);
-            ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.1);
+            
+            ctx.strokeStyle = fixedLineColor;
             ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padding, 90); ctx.lineTo(width - padding, 90); ctx.stroke();
             ctx.restore();
-            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config);
+            
+            // 页码也使用固定颜色
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
+                color: 'rgba(155, 154, 151, 0.7)'
+            });
         },
         getTextStyles: (segment, config) => {
             const accentColor = config.accentColor || '#0F7B6C';
@@ -254,99 +265,86 @@ const TemplateDefinitions = {
 
     'elegant-book': {
         /**
-         * 书籍内页 - 深度模拟真实纸张、光影与古典排版
+         * 书籍内页 - 模拟真实的单页书籍装帧感
+         * 设计要点：左侧装订阴影（Gutter），单侧受光，极简边角排版
          */
         getContentBox: (config, width, height) => {
             const padding = parseFloat(config.textPadding) || 55;
-            const topMargin = 130; // 增加顶部边距，更有呼吸感
+            const topMargin = 130; 
             const bottomMargin = config.hasSignature ? 110 : 90;
-            return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
+            // 增加左侧边距以避开装订阴影区
+            return { x: padding + 10, y: topMargin, width: width - (padding * 2) - 10, height: height - topMargin - bottomMargin };
         },
         drawBackground: (ctx, width, height, config) => {
             ctx.save();
             
-            // 1. 基础纸张色相 - 采用非均匀光照渐变 (Simulating side light)
-            const baseGrad = ctx.createLinearGradient(0, 0, width, height);
+            // 1. 基础纸张色 - 严格水平单侧受光模拟
+            // 模拟主光源从右侧射入，纸张从右向左由于远离光源而产生的极其微弱的亮度衰减
+            const baseGrad = ctx.createLinearGradient(width, 0, 0, 0);
             const bgColor = config.bgColor || '#FDFBF7';
-            baseGrad.addColorStop(0, bgColor);
-            baseGrad.addColorStop(0.5, CanvasUtils.hexToRgba(bgColor, 0.98));
-            baseGrad.addColorStop(1, CanvasUtils.hexToRgba(bgColor, 0.95));
+            baseGrad.addColorStop(0, bgColor); // 右侧最亮（原始纸张色）
+            baseGrad.addColorStop(1, CanvasUtils.hexToRgba(bgColor, 0.96)); // 左侧微暗
             ctx.fillStyle = baseGrad;
             ctx.fillRect(0, 0, width, height);
             
-            // 2. 绘制缓存的高级纸张纹理
+            // 2. 绘制离屏缓存的高级纸张纹理
             const texture = TemplateDefinitions._getPaperTexture(width, height);
             ctx.globalCompositeOperation = 'multiply';
             ctx.drawImage(texture, 0, 0);
 
-            // 3. 模拟书籍装订处的深度阴影 (The Spine/Gutter shadow)
+            // 3. 【美学重构】极致单侧装订阴影 (Left Gutter Only)
+            // 彻底移除任何右侧阴影逻辑
             ctx.globalCompositeOperation = 'source-over';
-            const shadowGrad = ctx.createLinearGradient(0, 0, width, 0);
-            shadowGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
-            shadowGrad.addColorStop(0.02, 'rgba(0,0,0,0.02)');
-            shadowGrad.addColorStop(0.08, 'rgba(0,0,0,0)');
-            // 模拟中心微微隆起
-            shadowGrad.addColorStop(0.48, 'rgba(255,255,255,0)');
-            shadowGrad.addColorStop(0.5, 'rgba(255,255,255,0.03)');
-            shadowGrad.addColorStop(0.52, 'rgba(255,255,255,0)');
-            // 模拟右侧边缘微暗
-            shadowGrad.addColorStop(0.95, 'rgba(0,0,0,0)');
-            shadowGrad.addColorStop(1, 'rgba(0,0,0,0.05)');
-            ctx.fillStyle = shadowGrad;
-            ctx.fillRect(0, 0, width, height);
+            const gutterGrad = ctx.createLinearGradient(0, 0, width * 0.12, 0);
+            gutterGrad.addColorStop(0, 'rgba(0,0,0,0.15)'); // 书脊折痕最深处
+            gutterGrad.addColorStop(0.3, 'rgba(0,0,0,0.06)');
+            gutterGrad.addColorStop(0.7, 'rgba(0,0,0,0.01)');
+            gutterGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gutterGrad;
+            ctx.fillRect(0, 0, width * 0.12, height);
 
-            // 4. 环境光阴影 (Ambient Occlusion / Vignette)
-            const vignette = ctx.createRadialGradient(width/2, height/2, width/3, width/2, height/2, width);
-            vignette.addColorStop(0, 'rgba(0,0,0,0)');
-            vignette.addColorStop(1, 'rgba(93,64,55,0.08)');
-            ctx.fillStyle = vignette;
-            ctx.fillRect(0, 0, width, height);
-
-            // 5. 纸张边缘质感 - 极细的反光边 (Paper edge highlight)
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, 0); ctx.lineTo(width, 0); ctx.moveTo(0, 0); ctx.lineTo(0, height);
-            ctx.stroke();
+            // 4. 纸张右边缘的高光切面 (Edge Highlight)
+            // 模拟纸张厚度在受光面产生的微弱高光，增强物理真实感
+            const edgeReflect = ctx.createLinearGradient(width - 3, 0, width, 0);
+            edgeReflect.addColorStop(0, 'rgba(255,255,255,0)');
+            edgeReflect.addColorStop(1, 'rgba(255,255,255,0.4)');
+            ctx.fillStyle = edgeReflect;
+            ctx.fillRect(width - 3, 0, 3, height);
             
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
-            const textColor = config.textColor || '#2B2B2B';
             const padding = parseFloat(config.textPadding) || 55;
-            const accentColor = config.accentColor || '#8C3A3A';
             ctx.save();
             
-            // 顶部装饰线：改为更古典的双线或精细虚线风格
-            ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.15);
-            ctx.lineWidth = 0.5; 
+            // 使用固定的古典墨色
+            const fixedMutedInk = 'rgba(93, 64, 55, 0.4)';
+            const fixedLineColor = 'rgba(93, 64, 55, 0.12)';
+            
+            // 顶部装饰
+            ctx.strokeStyle = fixedLineColor;
+            ctx.lineWidth = 0.8; 
             ctx.beginPath(); 
-            ctx.moveTo(padding, 80); 
+            ctx.moveTo(padding + 10, 80); 
             ctx.lineTo(width - padding, 80); 
             ctx.stroke();
             
-            // 装饰性文字
-            ctx.fillStyle = CanvasUtils.hexToRgba(textColor, 0.35);
+            ctx.fillStyle = fixedMutedInk;
             ctx.font = 'italic 500 11px "Noto Serif SC", serif';
             ctx.textAlign = 'center'; 
-            ctx.fillText('C L A S S I C   L I T E R A T U R E', width / 2, 65);
+            ctx.fillText('C L A S S I C   L I T E R A T U R E', width / 2 + 5, 65);
             
-            // 章节符号
-            ctx.fillStyle = accentColor;
+            ctx.fillStyle = '#5D4037';
             ctx.font = '16px serif';
-            ctx.fillText('§', padding, 68);
+            ctx.fillText('§', padding + 10, 68);
 
-            // 页码：改为精致的罗马数字感或带装饰的 x / x
-            if (config.showPageNumber) {
-                const pageNum = config.hasCover ? index : index + 1;
-                const totalPage = config.hasCover ? totalCount - 1 : totalCount;
-                if (totalPage > 0) {
-                    ctx.font = '500 12px "Noto Serif SC", serif';
-                    ctx.textAlign = 'right';
-                    const pageText = `P. ${String(pageNum).padStart(2, '0')}  /  ${String(totalPage).padStart(2, '0')}`;
-                    ctx.fillText(pageText, width - padding, height - 35);
-                }
-            }
+            // 页码：使用统一的物理边角定位
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
+                color: fixedMutedInk,
+                font: '500 12px "Noto Serif SC", serif',
+                prefix: 'P. ',
+                padZero: true
+            });
             ctx.restore();
         },
         getTextStyles: (segment, config) => {
