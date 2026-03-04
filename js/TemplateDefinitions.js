@@ -36,6 +36,113 @@ const TemplateDefinitions = {
         ctx.restore();
     },
 
+    /**
+     * 噪点纹理缓存
+     */
+    _noiseTextureCache: new Map(),
+
+    /**
+     * 生成噪点纹理
+     */
+    _getNoiseTexture: (width, height) => {
+        const key = `${width}x${height}`;
+        if (TemplateDefinitions._noiseTextureCache.has(key)) {
+            return TemplateDefinitions._noiseTextureCache.get(key);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const tCtx = canvas.getContext('2d');
+        tCtx.globalAlpha = 0.04;
+        for (let i = 0; i < 5000; i++) {
+            tCtx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
+            tCtx.fillRect(Math.random() * width, Math.random() * height, 1.2, 1.2);
+        }
+        TemplateDefinitions._noiseTextureCache.set(key, canvas);
+        return canvas;
+    },
+
+    /**
+     * 纸张纹理缓存
+     */
+    _paperTextureCache: new Map(),
+
+    /**
+     * 生成纸张纹理 (深度优化版：包含噪点、长纤维、以及随机纸浆感)
+     */
+    _getPaperTexture: (width, height) => {
+        const key = `${width}x${height}`;
+        if (TemplateDefinitions._paperTextureCache.has(key)) {
+            return TemplateDefinitions._paperTextureCache.get(key);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const tCtx = canvas.getContext('2d');
+
+        // 1. 基础极细噪点 (Simulating paper grain)
+        tCtx.globalAlpha = 0.06;
+        for (let i = 0; i < 8000; i++) {
+            const size = Math.random() * 1.5;
+            tCtx.fillStyle = Math.random() > 0.5 ? '#8b4513' : '#000';
+            tCtx.fillRect(Math.random() * width, Math.random() * height, size, size);
+        }
+        
+        // 2. 模拟随机纸浆团 (Paper pulp / blotches)
+        tCtx.globalAlpha = 0.02;
+        for (let i = 0; i < 40; i++) {
+            const bx = Math.random() * width;
+            const by = Math.random() * height;
+            const br = 10 + Math.random() * 50;
+            const grad = tCtx.createRadialGradient(bx, by, 0, bx, by, br);
+            grad.addColorStop(0, '#8b4513');
+            grad.addColorStop(1, 'transparent');
+            tCtx.fillStyle = grad;
+            tCtx.beginPath();
+            tCtx.arc(bx, by, br, 0, Math.PI * 2);
+            tCtx.fill();
+        }
+
+        // 3. 模拟长纤维 (Fine fibers)
+        tCtx.globalAlpha = 0.04;
+        tCtx.strokeStyle = '#5d4037';
+        tCtx.lineWidth = 0.4;
+        for (let i = 0; i < 200; i++) {
+            const lx = Math.random() * width;
+            const ly = Math.random() * height;
+            const len = 4 + Math.random() * 12;
+            const angle = Math.random() * Math.PI * 2;
+            // 绘制稍微弯曲的纤维
+            tCtx.beginPath();
+            tCtx.moveTo(lx, ly);
+            const cp1x = lx + Math.cos(angle) * (len / 3);
+            const cp1y = ly + Math.sin(angle) * (len / 3) + (Math.random() * 2 - 1);
+            tCtx.quadraticCurveTo(cp1x, cp1y, lx + Math.cos(angle) * len, ly + Math.sin(angle) * len);
+            tCtx.stroke();
+        }
+
+        TemplateDefinitions._paperTextureCache.set(key, canvas);
+        return canvas;
+    },
+
+    'blank': {
+        /**
+         * 空白模板 - 极致简约
+         */
+        drawForeground: (ctx, width, height, index, totalCount, config) => {
+            TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config);
+        },
+        getTextStyles: (segment, config) => {
+            const accentColor = config.accentColor || '#1A1A1A';
+            const textColor = config.textColor || '#1A1A1A';
+            if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.headingLevel) {
+                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.2) };
+            }
+            return { textColor };
+        }
+    },
+
     'polaroid': {
         /**
          * 复古拍立得 - 相纸留白与复古手写感
@@ -55,15 +162,15 @@ const TemplateDefinitions = {
         },
         drawBackground: (ctx, width, height, config) => {
             ctx.save();
+            // 只有在非渐变模式下才填充底色，渐变色由渲染器预先绘制
             if (config.bgMode !== 'gradient') {
                 ctx.fillStyle = config.bgColor || '#D6D6D6';
                 ctx.fillRect(0, 0, width, height);
-                ctx.globalAlpha = 0.03;
-                for (let i = 0; i < 5000; i++) {
-                    ctx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
-                    ctx.fillRect(Math.random() * width, Math.random() * height, 1.5, 1.5);
-                }
             }
+            
+            // 绘制缓存的复古噪点纹理
+            const noise = TemplateDefinitions._getNoiseTexture(width, height);
+            ctx.drawImage(noise, 0, 0);
             ctx.restore();
         },
         drawTextAreaBackground: (ctx, rect, config) => {
@@ -91,6 +198,7 @@ const TemplateDefinitions = {
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
+            // 胶带
             ctx.save();
             ctx.translate(width / 2, 45); ctx.rotate(-0.05);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -98,6 +206,7 @@ const TemplateDefinitions = {
             ctx.fillRect(-80, -20, 160, 40);
             ctx.restore();
 
+            // 页码：放在右下角留白处
             TemplateDefinitions._drawPageNumber(ctx, width, height, index, totalCount, config, {
                 x: width - 75, y: height - 85, color: 'rgba(0,0,0,0.3)', font: 'italic 14px serif'
             });
@@ -145,45 +254,97 @@ const TemplateDefinitions = {
 
     'elegant-book': {
         /**
-         * 书籍内页
+         * 书籍内页 - 深度模拟真实纸张、光影与古典排版
          */
         getContentBox: (config, width, height) => {
             const padding = parseFloat(config.textPadding) || 55;
-            const topMargin = 110, bottomMargin = config.hasSignature ? 100 : 80;
+            const topMargin = 130; // 增加顶部边距，更有呼吸感
+            const bottomMargin = config.hasSignature ? 110 : 90;
             return { x: padding, y: topMargin, width: width - (padding * 2), height: height - topMargin - bottomMargin };
         },
         drawBackground: (ctx, width, height, config) => {
             ctx.save();
+            
+            // 1. 基础纸张色相 - 采用非均匀光照渐变 (Simulating side light)
+            const baseGrad = ctx.createLinearGradient(0, 0, width, height);
             const bgColor = config.bgColor || '#FDFBF7';
-            ctx.fillStyle = bgColor;
+            baseGrad.addColorStop(0, bgColor);
+            baseGrad.addColorStop(0.5, CanvasUtils.hexToRgba(bgColor, 0.98));
+            baseGrad.addColorStop(1, CanvasUtils.hexToRgba(bgColor, 0.95));
+            ctx.fillStyle = baseGrad;
             ctx.fillRect(0, 0, width, height);
-            ctx.globalAlpha = 0.04;
-            for (let i = 0; i < 3000; i++) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#8b4513' : '#fff';
-                ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
-            }
-            const grad = ctx.createLinearGradient(0, 0, width, 0);
-            grad.addColorStop(0, 'rgba(0,0,0,0.02)'); grad.addColorStop(0.05, 'rgba(0,0,0,0)');
-            grad.addColorStop(0.5, 'rgba(255,255,255,0.01)'); grad.addColorStop(0.95, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.02)');
-            ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+            
+            // 2. 绘制缓存的高级纸张纹理
+            const texture = TemplateDefinitions._getPaperTexture(width, height);
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.drawImage(texture, 0, 0);
+
+            // 3. 模拟书籍装订处的深度阴影 (The Spine/Gutter shadow)
+            ctx.globalCompositeOperation = 'source-over';
+            const shadowGrad = ctx.createLinearGradient(0, 0, width, 0);
+            shadowGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
+            shadowGrad.addColorStop(0.02, 'rgba(0,0,0,0.02)');
+            shadowGrad.addColorStop(0.08, 'rgba(0,0,0,0)');
+            // 模拟中心微微隆起
+            shadowGrad.addColorStop(0.48, 'rgba(255,255,255,0)');
+            shadowGrad.addColorStop(0.5, 'rgba(255,255,255,0.03)');
+            shadowGrad.addColorStop(0.52, 'rgba(255,255,255,0)');
+            // 模拟右侧边缘微暗
+            shadowGrad.addColorStop(0.95, 'rgba(0,0,0,0)');
+            shadowGrad.addColorStop(1, 'rgba(0,0,0,0.05)');
+            ctx.fillStyle = shadowGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // 4. 环境光阴影 (Ambient Occlusion / Vignette)
+            const vignette = ctx.createRadialGradient(width/2, height/2, width/3, width/2, height/2, width);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(93,64,55,0.08)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, width, height);
+
+            // 5. 纸张边缘质感 - 极细的反光边 (Paper edge highlight)
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(width, 0); ctx.moveTo(0, 0); ctx.lineTo(0, height);
+            ctx.stroke();
+            
             ctx.restore();
         },
         drawForeground: (ctx, width, height, index, totalCount, config) => {
             const textColor = config.textColor || '#2B2B2B';
             const padding = parseFloat(config.textPadding) || 55;
+            const accentColor = config.accentColor || '#8C3A3A';
             ctx.save();
+            
+            // 顶部装饰线：改为更古典的双线或精细虚线风格
             ctx.strokeStyle = CanvasUtils.hexToRgba(textColor, 0.15);
-            ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(padding, 65); ctx.lineTo(width - padding, 65); ctx.stroke();
-            ctx.fillStyle = CanvasUtils.hexToRgba(textColor, 0.4);
-            ctx.font = 'italic 11px "Noto Serif SC", serif';
-            ctx.textAlign = 'center'; ctx.fillText('• 经典文学集珍 •', width / 2, 55);
+            ctx.lineWidth = 0.5; 
+            ctx.beginPath(); 
+            ctx.moveTo(padding, 80); 
+            ctx.lineTo(width - padding, 80); 
+            ctx.stroke();
+            
+            // 装饰性文字
+            ctx.fillStyle = CanvasUtils.hexToRgba(textColor, 0.35);
+            ctx.font = 'italic 500 11px "Noto Serif SC", serif';
+            ctx.textAlign = 'center'; 
+            ctx.fillText('C L A S S I C   L I T E R A T U R E', width / 2, 65);
+            
+            // 章节符号
+            ctx.fillStyle = accentColor;
+            ctx.font = '16px serif';
+            ctx.fillText('§', padding, 68);
+
+            // 页码：改为精致的罗马数字感或带装饰的 x / x
             if (config.showPageNumber) {
                 const pageNum = config.hasCover ? index : index + 1;
                 const totalPage = config.hasCover ? totalCount - 1 : totalCount;
                 if (totalPage > 0) {
-                    ctx.font = 'italic 13px serif'; ctx.textAlign = 'right';
-                    ctx.fillText(`— ${pageNum} —`, width - padding, height - 35);
+                    ctx.font = '500 12px "Noto Serif SC", serif';
+                    ctx.textAlign = 'right';
+                    const pageText = `P. ${String(pageNum).padStart(2, '0')}  /  ${String(totalPage).padStart(2, '0')}`;
+                    ctx.fillText(pageText, width - padding, height - 35);
                 }
             }
             ctx.restore();
@@ -327,10 +488,10 @@ const TemplateDefinitions = {
                 grad.addColorStop(0, aura.c1); grad.addColorStop(1, aura.c2);
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
             });
-            ctx.globalAlpha = 0.02;
-            for (let i = 0; i < 2000; i++) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000'; ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
-            }
+            
+            // 绘制缓存的噪点纹理
+            const noise = TemplateDefinitions._getNoiseTexture(width, height);
+            ctx.drawImage(noise, 0, 0);
             ctx.restore();
         },
         drawTextAreaBackground: (ctx, rect, config) => {
@@ -390,7 +551,11 @@ const TemplateDefinitions = {
         getTextStyles: (segment, config) => {
             const accentColor = config.accentColor || '#00F5FF', textColor = config.textColor || '#E5E5E5';
             if (segment.fontWeight === '700' || segment.fontWeight === '800' || segment.isHighlight || segment.isCode || segment.headingLevel) {
-                return { textColor: accentColor, highlightColor: CanvasUtils.hexToRgba(accentColor, 0.1), codeBgColor: CanvasUtils.hexToRgba(accentColor, 0.15) };
+                return { 
+                    textColor: accentColor, 
+                    highlightColor: CanvasUtils.hexToRgba(accentColor, 0.1),
+                    codeBgColor: CanvasUtils.hexToRgba(accentColor, 0.15) 
+                };
             }
             return { textColor };
         }
