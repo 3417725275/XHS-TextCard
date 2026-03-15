@@ -20,4 +20,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://www.xhs-textcard.site/sitemap.xml
+Sitemap: https://xhs-textcard.site/sitemap.xml
