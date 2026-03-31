@@ -54,6 +54,11 @@ class TextSplitter {
             throw new Error('Markdown 解析库 (marked.js) 未加载，请检查网络或浏览器设置。');
         }
 
+        // 确保自定义 Markdown 扩展（如高亮、居中）在 lexer 前被注册
+        if (typeof MarkdownParser !== 'undefined' && typeof MarkdownParser.init === 'function') {
+            MarkdownParser.init();
+        }
+
         let tokens = [];
         try {
             tokens = marked.lexer(text);

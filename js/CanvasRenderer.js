@@ -189,25 +189,37 @@ class CanvasRenderer {
         ctx.textBaseline = 'middle';
         ctx.font = `800 ${fontSize}px ${fontFamily}`;
         
-        // 简单的自动换行处理
+        // 支持配置换行: 既支持真实换行，也支持 "\\n" 字面量
+        const titleText = String(layout.title || '未命名文档').replace(/\\n/g, '\n');
         const maxWidth = width - (padding * 2);
-        const words = layout.title.split('');
-        let line = '';
         const lines = [];
-        
-        for(let n = 0; n < words.length; n++) {
-            let testLine = line + words[n];
-            let metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n];
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
+        const paragraphs = titleText.split('\n');
 
-        const lineHeight = fontSize * 1.4;
+        paragraphs.forEach((paragraph) => {
+            // 保留空行，方便做电影感标题排版
+            if (!paragraph) {
+                lines.push('');
+                return;
+            }
+
+            const chars = paragraph.split('');
+            let line = '';
+            for (let n = 0; n < chars.length; n++) {
+                const testLine = line + chars[n];
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0) {
+                    lines.push(line);
+                    line = chars[n];
+                } else {
+                    line = testLine;
+                }
+            }
+            if (line) {
+                lines.push(line);
+            }
+        });
+
+        const lineHeight = fontSize * (parseFloat(config.coverLineHeight) || 1.4);
         const totalTextHeight = lines.length * lineHeight;
         // 垂直居中于下半部分
         let startY = textY + (textH / 2) - (totalTextHeight / 2) + (fontSize * 0.4);
@@ -241,6 +253,43 @@ class CanvasRenderer {
              ctx.strokeStyle = config.accentColor || '#00F5FF';
              ctx.lineWidth = 2;
              ctx.strokeRect(20, 20, width - 40, height - 40);
+
+        } else if (templateId === 'cinematic-film') {
+             // 电影胶片：封面也保留信箱遮幅 + 齿孔 + 胶片颗粒
+             const letterboxH = Math.round(height * 0.065);
+             const accentColor = config.accentColor || '#C8B89A';
+
+             // 暗角
+             const vignetteGrad = ctx.createRadialGradient(
+                 width * 0.5, height * 0.5, width * 0.25,
+                 width * 0.5, height * 0.5, width * 0.85
+             );
+             vignetteGrad.addColorStop(0, 'rgba(0,0,0,0)');
+             vignetteGrad.addColorStop(0.7, 'rgba(0,0,0,0.2)');
+             vignetteGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
+             ctx.fillStyle = vignetteGrad;
+             ctx.fillRect(0, 0, width, height);
+
+             // 信箱遮幅
+             ctx.fillStyle = '#000000';
+             ctx.fillRect(0, 0, width, letterboxH);
+             ctx.fillRect(0, height - letterboxH, width, letterboxH);
+
+             // 齿孔
+             const sprocketW = 8;
+             const sprocketH = Math.round(letterboxH * 0.45);
+             const sprocketY_top = Math.round((letterboxH - sprocketH) / 2);
+             const sprocketY_bottom = height - letterboxH + sprocketY_top;
+             for (let x = 20; x < width - 10; x += 32) {
+                 CanvasUtils.drawRoundedRect(ctx, x, sprocketY_top, sprocketW, sprocketH, 2, 'rgba(200, 184, 154, 0.12)');
+                 CanvasUtils.drawRoundedRect(ctx, x, sprocketY_bottom, sprocketW, sprocketH, 2, 'rgba(200, 184, 154, 0.12)');
+             }
+
+             // 胶片编码
+             ctx.font = '500 8px "Courier New", monospace';
+             ctx.textAlign = 'right';
+             ctx.fillStyle = 'rgba(200, 184, 154, 0.25)';
+             ctx.fillText('KODAK  5222  DOUBLE-X', width - 14, letterboxH - 6);
         }
         
         ctx.restore();
@@ -350,13 +399,13 @@ class CanvasRenderer {
             }
             const contentY = currentY + (layout.marginTop || 0);
             if (layout.type === 'heading') {
-                this.drawStyledLines(ctx, layout.lines, textAreaRect.x, contentY, config, templateId);
+                this.drawStyledLines(ctx, layout.lines, textAreaRect.x, contentY, config, templateId, textAreaRect.width, layout.align);
             } else if (layout.type === 'blockquote') {
                 const indent = layout.indent || 20;
                 let quoteBarColor = config.accentColor || 'rgba(0,0,0,0.1)';
                 ctx.fillStyle = quoteBarColor;
                 ctx.fillRect(textAreaRect.x, contentY, templateId === 'deep-night' ? 2 : 3, layout.height - (layout.marginTop || 0) - (layout.marginBottom || 0));
-                this.drawStyledLines(ctx, layout.lines, textAreaRect.x + indent, contentY, config, templateId);
+                this.drawStyledLines(ctx, layout.lines, textAreaRect.x + indent, contentY, config, templateId, textAreaRect.width - indent, layout.align);
             } else if (layout.type === 'list-item') {
                 const fontSize = parseFloat(config.fontSize) || 16;
                 const fontFamily = config.fontFamily === 'inherit' ? "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" : (config.fontFamily || "sans-serif");
@@ -364,11 +413,11 @@ class CanvasRenderer {
                 let prefixColor = config.accentColor || config.textColor;
                 ctx.fillStyle = prefixColor;
                 ctx.fillText(layout.prefix, textAreaRect.x, contentY);
-                this.drawStyledLines(ctx, layout.lines, textAreaRect.x + layout.prefixWidth, contentY, config, templateId);
+                this.drawStyledLines(ctx, layout.lines, textAreaRect.x + layout.prefixWidth, contentY, config, templateId, textAreaRect.width - layout.prefixWidth, layout.align);
             } else if (layout.type === 'image') {
                 this.drawInlineImage(ctx, layout, textAreaRect.x, contentY);
             } else if (layout.lines) {
-                this.drawStyledLines(ctx, layout.lines, textAreaRect.x, contentY, config, templateId);
+                this.drawStyledLines(ctx, layout.lines, textAreaRect.x, contentY, config, templateId, textAreaRect.width, layout.align);
             }
             currentY += layout.height;
         }
@@ -402,10 +451,11 @@ class CanvasRenderer {
         }
     }
 
-    drawStyledLines(ctx, lines, startX, startY, config, templateId) {
+    drawStyledLines(ctx, lines, startX, startY, config, templateId, maxWidth = null, align = 'left') {
         if (!lines || !Array.isArray(lines)) return;
         let lineY = startY;
         const configFontSize = parseFloat(config.fontSize) || 16;
+        const drawWidth = maxWidth || 0;
 
         for (const lineSegments of lines) {
             let segmentX = startX;
@@ -419,6 +469,22 @@ class CanvasRenderer {
 
             const lineHeight = maxFontSize * (parseFloat(config.lineHeight) || 1.6);
             const letterSpacing = parseFloat(config.letterSpacing) || 0;
+
+            // 居中：按整行宽度计算起点，再逐段绘制
+            if (align === 'center' && drawWidth > 0 && Array.isArray(lineSegments)) {
+                let lineWidth = 0;
+                for (const segment of lineSegments) {
+                    const fontStyle = segment.fontStyle || 'normal';
+                    const fontWeight = segment.fontWeight || 'normal';
+                    const fontSize = parseFloat(segment.fontSize) || parseFloat(config.fontSize) || 16;
+                    const fontFamily = config.fontFamily === 'inherit'
+                        ? "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif"
+                        : (config.fontFamily || 'sans-serif');
+                    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+                    lineWidth += CanvasUtils.measureTextWidth(ctx, segment.text || '', letterSpacing);
+                }
+                segmentX = startX + (drawWidth - lineWidth) / 2;
+            }
 
             if (Array.isArray(lineSegments)) {
                 for (const segment of lineSegments) {

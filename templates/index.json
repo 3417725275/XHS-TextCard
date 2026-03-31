@@ -1,6 +1,10 @@
 {
   "templates": [
     {
+      "id": "cinematic-film",
+      "name": "电影胶片"
+    },
+    {
       "id": "starry-night",
       "name": "星光质感"
     },

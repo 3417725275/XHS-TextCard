@@ -65,6 +65,12 @@
   cursor: not-allowed;
 }
 
+.form-textarea {
+  min-height: 88px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 /* === 范围输入 === */
 .form-range {
   -webkit-appearance: none;

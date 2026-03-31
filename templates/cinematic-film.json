@@ -1,0 +1,33 @@
+{
+    "name": "电影胶片",
+    "description": "致敬Adele《Someone Like You》，黑白巴黎的胶片质感与电影宽银幕构图",
+    "author": "geekfoxcharlie",
+    "version": "1.0",
+    "config": {
+        "coverImage": "assets/cover-cinematic-film.jpg",
+        "coverFontSize": 46,
+        "coverLineHeight": 1.32,
+        "bgColor": "#1A1A18",
+        "textColor": "#D8D4CE",
+        "fontSize": 17,
+        "lineHeight": 1.9,
+        "letterSpacing": 0.8,
+        "textPadding": 50,
+        "fontFamily": "'Noto Serif SC', 'Source Han Serif SC', Georgia, serif",
+        "hasWatermark": false,
+        "watermarkText": "极客狐",
+        "watermarkColor": "rgba(255, 255, 255, 0.02)",
+        "hasSignature": true,
+        "signatureText": "极客狐",
+        "signatureColor": "#6B6560",
+        "signaturePosition": "bottom",
+        "signatureStyle": "elegant-serif",
+        "h1Scale": 1.5,
+        "h2Scale": 1.25,
+        "h3Scale": 1.1,
+        "accentColor": "#C8B89A",
+        "showPageNumber": true,
+        "hasSocialIcons": false,
+        "selectedSocialIcons": []
+    }
+}
