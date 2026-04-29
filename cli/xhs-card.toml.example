@@ -1,0 +1,53 @@
+# XHS-TextCard CLI 配置文件示例
+# 所有字段均为可选，缺省时使用模板默认值
+# 颜色支持所有 CSS 格式：hex, rgb(), rgba(), hsl(), 命名色
+
+# 模板选择
+template = "starry-night"
+
+# 输出设置
+[output]
+format = "jpeg"          # "jpeg" | "png"
+quality = 0.92           # JPEG 质量 (0-1)，仅 jpeg 生效
+
+# 排版参数
+[typography]
+fontSize = 16
+lineHeight = 1.6
+letterSpacing = 0
+textPadding = 35
+fontFamily = "Microsoft YaHei"
+
+# 标题缩放比例
+[typography.heading]
+h1Scale = 1.8
+h2Scale = 1.4
+h3Scale = 1.2
+
+# 颜色
+[colors]
+background = "#1a1a2e"   # 深海蓝
+text = "#e0e0e0"         # 浅灰
+accent = "#64ffda"       # 薄荷绿
+
+# 封面
+[cover]
+enabled = true
+# title 不配置则自动从文章第一个标题提取
+fontSize = 28
+
+# 水印
+[watermark]
+enabled = false
+text = "原创内容"
+color = "rgba(255,255,255,0.05)"
+
+# 签名
+[signature]
+enabled = true
+text = "我的小红书ID"
+color = "#555555"
+
+# 页码
+[page]
+showNumber = true

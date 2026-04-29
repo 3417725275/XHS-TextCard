@@ -1,0 +1,23 @@
+{
+  "name": "xhs-card",
+  "version": "1.0.0",
+  "description": "XHS-TextCard CLI - 将 Markdown 转换为小红书文字卡片图片",
+  "main": "cli.js",
+  "bin": {
+    "xhs-card": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "canvas": "^3.1.0",
+    "glob": "^10.3.0",
+    "marked": "^15.0.0",
+    "toml": "^3.0.0"
+  },
+  "keywords": ["xhs", "xiaohongshu", "markdown", "image", "card", "cli"],
+  "license": "MIT"
+}
