@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cut -d'|' -f1)",
+      "Bash(grep -v \"^$\")",
+      "Bash(git log:*)",
+      "Bash(find D:/git/Airport -type f -name *.cpp -o -name *.h -o -name *.hpp -o -name *.py -o -name *.ts -o -name *.tsx)",
+      "Bash(git -C D:/git/Airport log --format=\"%an\" --all)",
+      "Bash(git -C D:/git/Airport log --all --oneline --grep=\"fix\")",
+      "Bash(git -C D:/git/Airport log --all --format=\"%an|%s\" --grep=\"fix\")",
+      "Bash(find D:/git/Airport -type f \\\\\\(-name *.cpp -o -name *.h -o -name *.hpp \\\\\\) ! -path */target/* ! -path */node_modules/*)",
+      "Bash(find D:/git/Airport/crates -type f \\\\\\(-name *.rs \\\\\\) ! -path */target/*)",
+      "Bash(find D:/git/Airport/framework -type f \\\\\\(-name *.cpp -o -name *.h \\\\\\) ! -path */target/*)",
+      "Bash(find D:/git/Airport/cpp -type f \\\\\\(-name *.cpp -o -name *.h \\\\\\))",
+      "Bash(find D:/git/Airport/plugins -type f \\\\\\(-name *.cpp -o -name *.h -o -name *.py \\\\\\) ! -path */target/*)",
+      "Bash(find D:/git/Airport/plugins/nous -type f \\\\\\(-name *.cpp -o -name *.h \\\\\\))",
+      "Bash(git -C D:/git/Airport log --all --format=\"%H|%an|%s\" -- \"plugins/nous\")",
+      "Bash(git -C D:/git/Airport log --all --format=\"%H|%an|%s\" --author=\"chenfei\" -- \"plugins/nous\")",
+      "Bash(git:*)",
+      "Bash(find D:/git/Airport/plugins -name pybind.cpp -o -name *_pybind.cpp)",
+      "Bash(grep -rn \"throw\\\\|catch\\\\|try\\\\|assert\\\\|nullptr\\\\|NULL\" D:/git/Airport/plugins/nous/graph/src/*.cpp)",
+      "Bash(grep -rn \"shared_ptr\\\\|unique_ptr\\\\|DUniquePtr\\\\|DSharedPtr\" D:/git/Airport/plugins/nous/graph/src/*.cpp)"
+    ]
+  }
+}
